@@ -622,10 +622,10 @@ module issue_read_operands
           forward_rs2[0] = 1'b0;
           stall_rs2[0]   = 1'b0;
         end
-        if (OPERANDS_PER_INSTR == 3 && ~x_issue_resp_i.register_read[2]) begin
-          forward_rs3[0] = 1'b0;
-          stall_rs3[0]   = 1'b0;
-        end
+//        if (OPERANDS_PER_INSTR == 3 && ~x_issue_resp_i.register_read[2]) begin
+//          forward_rs3[0] = 1'b0;
+//          stall_rs3[0]   = 1'b0;
+//        end
       end
       stall_raw[0] = x_transaction_rejected ? 1'b0 : stall_rs1[0] || stall_rs2[0] || stall_rs3[0];
     end
