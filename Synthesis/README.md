@@ -26,10 +26,13 @@ The CVA6 project consumes a large amount of resources. Direct behavioral simulat
 ### System Requirements
 - **RAM:** Minimum 16 GB (for systems with less RAM, only the synthesis + post-synthesis approach is viable)
 - **OS:** Linux (Ubuntu 20.04/22.04 recommended) or Windows with WSL2
-- **Vivado Version:** 2024.2 or newer (older versions may not be fully compatible)
-
+- **Vivado Version:** Requires Vivado 2024.2 or newer (older versions may not be fully compatible). Although the upstream CVA6 developers originally implemented the design with Vivado 2018.2, this project was built, synthesized, and verified using Vivado 2024.2.
 ### Tools Required
 - **Git:** For cloning the repository
+- **CVA6 Repository:** Tested and verified on commit `41e30493046e7719ff59b77af5a6f0e436066a55`
+
+   (Use `git checkout 41e3049...` to ensure full reproducibility).
+
 - **Bender:** SystemVerilog dependency manager for PULP Platform projects
 - **Vivado Design Suite:** For synthesis and implementation
 
@@ -99,9 +102,9 @@ Replace `<cpu_version>` with one of the following:
 | `cv64a6_imafdc_sv39` | 64-bit full-featured core (most complex) | RV64IMAFDC + Sv39 MMU |
 
 **Example:**
-bash
+```bash
 bender script vivado -t cv32a6_imac_sv32 > cva6_files.tcl
-
+```
 After running, `cva6_files.tcl` will be created in the same directory.
 
 > **Note:**  
@@ -133,7 +136,7 @@ Now run the TCL file inside Vivado to build the project.
    ```
 
 > **Expected Output:**  
-> Vivado should begin adding SystemVerilog files and ultimately create a project with a top module (typically `ariane` or `cva6_wrapper`).
+> Vivado should begin adding SystemVerilog files and ultimately create a project with a top module (typically `cva6`).
 
 ---
 
@@ -224,16 +227,16 @@ This is great for readability and debugging at the RTL level — but **after syn
 
 To discover the new names, export the synthesized netlist from the Tcl console:
 
-tcl
+```tcl
 write_verilog -force cva6_netlist.v
-
+```
 (Use `pwd` in the Tcl console to see where the file will be written.) The resulting netlist is huge — over **5,142,000 lines** in this project — so search for the top module name to find its port list. Don't panic; this is completely normal.
 
 You will encounter **escaped identifiers** such as:
 
-verilog
+```verilog
 output [31:0] \rvfi_probes_o[csr][jvt_q] ;
-
+```
 In Verilog, a leading backslash (`\`) means *everything up to the first whitespace is part of the signal name* — which is why there is a mandatory space before the `;`. Your testbench must use these exact escaped names when connecting to the netlist.
 
 #### 6.4 Testbench Architecture: An AXI Virtual RAM
@@ -246,9 +249,9 @@ The testbench therefore implements a **finite state machine (FSM) acting as a vi
 - It accepts write-address (`AW`) / write-data (`W`) transactions so the core can write results back
 - Program contents are preloaded with:
 
-systemverilog
+```systemverilog
 $readmemh("/path/to/firmware.hex", ram);
-
+```
 #### 6.5 Building the Firmware
 
 The test program is a minimal RISC-V assembly file with one tactical trick: after computing the result, it **stores it to memory**, forcing the core to perform an AXI write that the testbench can observe — a self-checking handshake between core and testbench.
@@ -320,16 +323,6 @@ Once the program executes, the core issues an AXI write transaction carrying the
 
 Simulation cost on the test machine (from the Tcl console): peak memory ≈ **10.8 GB**, with the initial `launch_simulation` taking ≈ 8 minutes — which is exactly why the swap file from Section 6.2 matters on a 16 GB system.
 
-
----
-
-Notes on choices I made:
-
-- **Section numbering** (6.1–6.6) keeps it navigable inside the existing `### Step 6` heading without breaking the README's step sequence.
-- I pulled the **memory peak (~10.8 GB)** and **launch time (8:03)** from the Tcl console visible in your screenshots — it's strong quantitative evidence tying back to the swap-file section. Remove that last paragraph if you don't want it.
-- Image filenames are written as `image-(2).png` and `image.png` to match your uploads — rename them (e.g. `Pic2.png`, `Pic3.png`) to match the README's existing `Pic1.png` convention if you prefer.
-- I attributed the xsim workaround generically ("As it turns out, this is a known limitation") rather than naming your professor — add "as suggested by Dr. Mahani" back in if you want the credit line in the report.
-
 ---
 
 ## 4. Common Issues & Solutions
@@ -341,12 +334,12 @@ Notes on choices I made:
 bash: bender: command not found
 
 **Solution:**
-bash
+```bash
 which bender  # check if installed
 export PATH=$PATH:/usr/local/bin  # add to PATH temporarily
 echo 'export PATH=$PATH:/usr/local/bin' >> ~/.bashrc  # make permanent
 source ~/.bashrc
-
+```
 ---
 
 ### Issue 2: Synthesis Fails with Missing Files
@@ -358,11 +351,11 @@ ERROR: [Synth 8-439] module 'axi_node' not found
 **Cause:** Submodules were not cloned.
 
 **Solution:**
-bash
+```bash
 cd cva6
 git submodule update --init --recursive
 bender script vivado -t cv32a6_imac_sv32 > cva6_files.tcl
-
+```
 ---
 
 ### Issue 3: Out-of-Memory in Behavioral Simulation
@@ -374,12 +367,12 @@ ERROR: [XSIM 43-3322] Static elaboration of top level VHDL design unit failed.
 **Solution:**  
 Use post-synthesis simulation (see Step 6). If behavioral simulation is strictly required, increase system RAM or configure swap space:
 
-bash
+```bash
 sudo fallocate -l 8G /swapfile
 sudo chmod 600 /swapfile
 sudo mkswap /swapfile
 sudo swapon /swapfile
-
+```
 ---
 
 ### Issue 4: Bender Target Not Recognized
@@ -492,8 +485,6 @@ From **Reports → Utilization → Hierarchy**:
 
 ---
 
-Want me to also write up **Step 5: Run Synthesis** with instructions on how to navigate these reports in Vivado?
----
 
 ## 8. References
 
